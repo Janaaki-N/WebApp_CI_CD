@@ -3,64 +3,57 @@ pipeline {
 
     environment {
         AWS_REGION = 'us-east-1'
-        AWS_ACCOUNT_ID = '108322181673'
-        ECR_REPOSITORY = 'webapp-cicd'
-        ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
-        IMAGE_TAG = "latest"
+        ECR_URI = '108322181673.dkr.ecr.us-east-1.amazonaws.com/webapp-cicd'
+        IMAGE_NAME = 'webapp-cicd'
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Janaaki-N/WebApp_CI_CD.git'
-            }
-        }
-
-        stage('Login to AWS ECR') {
-            steps {
-                script {
-                    // Authenticate Docker with ECR
-                    sh """
-                    aws ecr get-login-password --region ${AWS_REGION} \
-                    | docker login --username AWS --password-stdin ${ECR_URI}
-                    """
-                }
+                git branch: 'main',
+                    url: 'https://github.com/Janaaki-N/WebApp_CI_CD.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh """
-                    docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
-                    docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
-                    """
-                }
+                bat """
+                docker build -t %IMAGE_NAME% .
+                """
             }
         }
 
-        stage('Push to ECR') {
+        stage('Login to AWS ECR') {
             steps {
-                script {
-                    sh "docker push ${ECR_URI}:${IMAGE_TAG}"
-                }
+                bat """
+                aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_URI%
+                """
             }
         }
 
-        stage('Clean up local images') {
+        stage('Tag Docker Image') {
             steps {
-                sh "docker rmi ${ECR_URI}:${IMAGE_TAG} || true"
-                sh "docker rmi ${ECR_REPOSITORY}:${IMAGE_TAG} || true"
+                bat """
+                docker tag %IMAGE_NAME%:latest %ECR_URI%:latest
+                """
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                bat """
+                docker push %ECR_URI%:latest
+                """
             }
         }
     }
 
     post {
         success {
-            echo "✅ Build and Push completed successfully!"
+            echo '✅ Docker image successfully pushed to AWS ECR!'
         }
         failure {
-            echo "❌ Build or Push failed. Check the logs."
+            echo '❌ Pipeline failed. Check logs for details.'
         }
     }
 }
