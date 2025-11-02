@@ -8,7 +8,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
@@ -24,23 +23,10 @@ pipeline {
             }
         }
 
-        // 🔍 Added Stage: Check AWS CLI
-        stage('Check AWS CLI') {
-            steps {
-                bat """
-                echo Checking AWS CLI installation...
-                where aws
-                aws --version
-                """
-            }
-        }
-
         stage('Login to AWS ECR') {
             steps {
                 bat """
-                echo Logging in to AWS ECR...
-                "C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe" ecr get-login-password --region %AWS_REGION% ^
-                | docker login --username AWS --password-stdin %ECR_URI%
+                aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_URI%
                 """
             }
         }
